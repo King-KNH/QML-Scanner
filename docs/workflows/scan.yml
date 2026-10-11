@@ -1,0 +1,55 @@
+name: Scan QML
+
+# Déclenché toutes les 15 minutes par cron-job.org (workflow_dispatch), comme Shadow Retracement.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: qml-scan
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Restaurer la mémoire (historique + état)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data
+          if gh release download qml-data -p store.tar.gz -D . --clobber; then
+            tar xzf store.tar.gz
+          else
+            echo "Premier lancement : pas encore de mémoire."
+          fi
+
+      - name: Scan, messages Telegram, alertes
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          DERIV_APP_ID: ${{ secrets.DERIV_APP_ID }}
+        run: python -m qml_scanner.runner
+
+      - name: Sauvegarder la mémoire
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tar czf store.tar.gz data
+          gh release view qml-data >/dev/null 2>&1 || gh release create qml-data --title "Mémoire du scanner QML" --notes "Fichiers de travail du scanner (historique et état). Ne pas supprimer."
+          gh release upload qml-data store.tar.gz --clobber
