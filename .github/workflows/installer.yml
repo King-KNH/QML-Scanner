@@ -1,0 +1,24 @@
+name: Installer
+
+# À lancer UNE fois : décompresse qml_scanner_v1.zip (déposé à la racine du dépôt) et enregistre les fichiers.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser et enregistrer
+        run: |
+          unzip -o qml_scanner_v1.zip -d _tmp
+          tar -C _tmp/qml_scanner --exclude='./.github' -cf - . | tar -xf -
+          rm -rf _tmp qml_scanner_v1.zip
+          git config user.name "installer"
+          git config user.email "installer@users.noreply.github.com"
+          git add -A
+          git commit -m "Installation du scanner QML" || echo "rien à enregistrer"
+          git push
