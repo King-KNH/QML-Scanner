@@ -9,7 +9,9 @@
 // RÈGLES DE VALIDATION (par le CORPS d'une bougie, jamais par une simple mèche) :
 //  1) cassure de la ligne QML (niveau de l'épaule gauche) par la tête : au moins une clôture au-delà de la ligne ;
 //  2) cassure de structure (LL pour une vente, HH pour un achat) : au moins une clôture au-delà du support (L / H).
-//  Les deux règles sont réglables / désactivables dans « Structure ».
+//  3) épaule gauche : la ligne QML doit atteindre au moins le milieu du segment support – tête (L et HH pour une vente,
+//     H et LL pour un achat), soit une hauteur d'épaule >= 50 % de celle de la tête (réglable, 0 = désactivé).
+//  Ces règles sont réglables / désactivables dans « Structure ».
 //
 // TYPE DE ZONE D'ENTRÉE (paramètres, groupe « Zone d'entrée ») : MPL, Order Block, Zone QML.
 //  Pour n'en utiliser qu'UN SEUL : active-le et désactive les deux autres.
@@ -29,9 +31,9 @@ indicator("KING QML (QML-R / QML-C)", shorttitle="KING QML", overlay=true, max_b
 extLen   = input.int(10, "Longueur des pivots (structure externe)", minval=2, group="Structure")
 strictSt = input.bool(true, "Respecter la structure (rejette si ni haussière ni baissière)", group="Structure")
 
-useMpl   = input.bool(true,  "Zone MPL (engloutissement à l'épaule gauche)", group="Zone d'entrée", tooltip="Pour n'utiliser qu'UN seul type de zone : active-le et désactive les deux autres. Si plusieurs sont actifs, priorité : MPL, puis OB, puis Zone QML. Si les trois sont désactivés, aucun QML n'est affiché.")
-useOb    = input.bool(true,  "Order Block (OB)", group="Zone d'entrée", tooltip="Dernière bougie opposée avant l'impulsion, en premium (vente) / discount (achat), la plus proche de la ligne QML.")
-useQmlz  = input.bool(false, "Zone QML (de la ligne QML jusqu'à la tête)", group="Zone d'entrée", tooltip="Rectangle entre le niveau de l'épaule gauche (ligne QML) et le sommet/creux de la tête. Aucune bougie particulière n'est exigée.")
+useMpl   = input.bool(false, "Zone MPL (engloutissement à l'épaule gauche)", group="Zone d'entrée", tooltip="Pour n'utiliser qu'UN seul type de zone : active-le et désactive les deux autres. Si plusieurs sont actifs, priorité : MPL, puis OB, puis Zone QML. Si les trois sont désactivés, aucun QML n'est affiché.")
+useOb    = input.bool(false, "Order Block (OB)", group="Zone d'entrée", tooltip="Dernière bougie opposée avant l'impulsion, en premium (vente) / discount (achat), la plus proche de la ligne QML.")
+useQmlz  = input.bool(true,  "Zone QML (de la ligne QML jusqu'à la tête)", group="Zone d'entrée", tooltip="Rectangle entre le niveau de l'épaule gauche (ligne QML) et le sommet/creux de la tête. Aucune bougie particulière n'est exigée.")
 useMid   = input.bool(false, "Autoriser le MPL en Midzone (entrée sur la zone, pas sur la ligne QML)", group="Zone d'entrée")
 reqMom   = input.bool(true, "Forte dynamique requise", group="Zone d'entrée")
 momBars  = input.int(1, "Bougies max pour la dynamique", minval=1, maxval=3, group="Zone d'entrée")
@@ -46,6 +48,7 @@ bodyBreak = input.bool(true, "Cassure de la ligne QML validée par le CORPS d'un
 bodyMin   = input.float(0.0, "Distance minimale de cette clôture au-delà de la ligne (x ATR)", minval=0.0, step=0.1, group="Structure")
 bodyStruct    = input.bool(true, "Cassure de structure (LL / HH) validée par le CORPS d'une bougie (clôture au-delà du support), pas par une mèche", group="Structure")
 bodyStructMin = input.float(0.0, "Distance minimale de cette clôture au-delà du support (x ATR)", minval=0.0, step=0.1, group="Structure")
+shRatio   = input.float(0.5, "Épaule gauche : la ligne QML doit atteindre cette fraction du segment support – tête (0.5 = le milieu, 0 = désactivé)", minval=0.0, maxval=1.0, step=0.05, group="Structure")
 
 maxBars  = input.int(300, "Durée de suivi d'une zone (barres)", minval=10, group="Affichage")
 maxQm    = input.int(20, "Nombre max de QML affichés", minval=1, maxval=60, group="Affichage")
@@ -346,6 +349,7 @@ detectQm(int d, int now) =>
             float pe = swPv(d, e)
             float pa2 = swPv(d, n - 6)
             float pb2 = swPv(d, n - 5)
+            bool shOk = shRatio <= 0.0 or (pa - pb) >= shRatio * (pc - pb)
             bool bodyOk = not bodyBreak
             if bodyBreak
                 int lbBody = array.get(swB, b)
@@ -359,7 +363,7 @@ detectQm(int d, int now) =>
                 for ks = hhbStruct + 1 to now
                     if xC(d, ks) < pb - bodyStructMin * array.get(aA, ks)
                         structOk := true
-            if not isReg and pc > pa and pe < pb and bodyOk and structOk
+            if not isReg and pc > pa and pe < pb and shOk and bodyOk and structOk
                 int typ = 0
                 if pa > pa2 and pb > pb2
                     typ := 1
