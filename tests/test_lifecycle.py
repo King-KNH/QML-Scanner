@@ -66,7 +66,7 @@ class TestParkedStatus(unittest.TestCase):
         self.assertTrue(scan(body)[0].away)
 
     def test_touch_then_close_above_is_invalid_not_parked(self):
-        seq = BASE + leg(118.0, 121.5, 3)                 # touches the line then closes above it: invalid, not parked
+        seq = BASE + leg(118.0, 127.5, 3)                 # touches the line then closes beyond the head (zone QML broken): invalid, not parked
         self.assertEqual(scan(seq)[0].status, "invalid")
 
 

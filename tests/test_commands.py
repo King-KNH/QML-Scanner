@@ -39,14 +39,15 @@ class TestSymbolMatching(unittest.TestCase):
         self.assertEqual(self.m("boom 500"), ["Boom 500 Index"])
         self.assertEqual(self.m("boom 50"), ["Boom 50 Index"])
         self.assertEqual(self.m("boom 1000"), ["Boom 1000 Index"])
-        self.assertEqual(self.m("crash 99"), ["Crash 99 Index"])
-        self.assertEqual(self.m("crash 100 index"), ["Crash 100 Index"])
+        self.assertEqual(self.m("crash 150"), ["Crash 150 Index"])
+        self.assertEqual(self.m("crash 100 index"), [])          # not watched: never mistaken for Crash 1000 or 150
         self.assertEqual(self.m("jump 10"), ["Jump 10 Index"])
         self.assertEqual(self.m("jump 100"), ["Jump 100 Index"])
-        self.assertEqual(self.m("volatility 150"), [])           # only exists as (1s): must be named so
-        self.assertEqual(self.m("volatility 150 (1s)"), ["Volatility 150 (1s) Index"])
-        self.assertEqual(self.m("volatility 15"), ["Volatility 15 Index"])
-        self.assertEqual(self.m("volatility 5"), ["Volatility 5 Index"])
+        self.assertEqual(self.m("volatility 150"), [])           # not on Deriv's public list: not watched
+        self.assertEqual(self.m("volatility 150 (1s)"), [])
+        self.assertEqual(self.m("volatility 15"), [])            # only the (1s) version is watched: must be named so
+        self.assertEqual(self.m("volatility 15 (1s)"), ["Volatility 15 (1s) Index"])
+        self.assertEqual(self.m("volatility 5"), [])
         self.assertEqual(self.m("volatility 50"), ["Volatility 50 Index"])
 
     def test_one_second_variants_are_distinct(self):
@@ -56,7 +57,9 @@ class TestSymbolMatching(unittest.TestCase):
         self.assertEqual(self.m("volatility 10 1s"), ["Volatility 10 (1s) Index"])
 
     def test_step_index(self):
-        self.assertEqual(self.m("step index"), ["Step Index"])
+        self.assertEqual(self.m("step index"), [])               # no number: ambiguous among the five, so none
+        self.assertEqual(self.m("step index 100"), ["Step Index 100"])
+        self.assertEqual(self.m("step 100"), ["Step Index 100"])
         self.assertEqual(self.m("step index 200"), ["Step Index 200"])
         self.assertEqual(self.m("step index 500"), ["Step Index 500"])
         self.assertEqual(self.m("step 300"), ["Step Index 300"])

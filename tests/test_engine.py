@@ -7,7 +7,7 @@ from qml_scanner.qml_core import Params
 P = Params(ext=3, atr_len=5)
 SELL_R = build(100, 110, 104, 120, 112, 126, 108, 118.0)
 SELL_C = build(100, 130, 100, 118, 95, 124, 90, 116.0)
-ENTRY_THEN_BREAK = build(100, 110, 104, 120, 112, 126, 108, 119.8) + leg(119.8, 121.5, 3)
+ENTRY_THEN_BREAK = build(100, 110, 104, 120, 112, 126, 108, 119.8) + leg(119.8, 127.5, 3)   # closes beyond the head: the QML zone is broken
 
 
 def one(seq, **kw):
@@ -20,10 +20,10 @@ class TestScenarios(unittest.TestCase):
         res = one(SELL_R)
         self.assertEqual(len(res), 1)
         s = res[0]
-        self.assertEqual((s.side, s.qml_type, s.zone_kind), ("sell", "QML-R", "MPL"))
+        self.assertEqual((s.side, s.qml_type, s.zone_kind), ("sell", "QML-R", "QMLZ"))
         self.assertAlmostEqual(s.entry, 120.0, 9)
-        self.assertAlmostEqual(s.zone_high, 120.0, 9)
-        self.assertAlmostEqual(s.zone_low, 119.5, 9)
+        self.assertAlmostEqual(s.zone_low, 120.0, 9)             # the QML zone: from the QML line ...
+        self.assertAlmostEqual(s.zone_high, s.head, 9)           # ... up to the head
         self.assertGreater(s.head, 125.0)
         self.assertLess(s.extreme, 109.0)
         self.assertGreater(s.leg, 15.0)
@@ -146,3 +146,30 @@ class TestInvariants(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestEntryZoneAndShoulderRule(unittest.TestCase):
+    """Harold's rules: the entry zone is ONLY the QML zone; the QML line must reach the middle of the L-HH segment."""
+
+    def test_default_zone_is_the_qml_zone_even_when_an_mpl_exists(self):
+        self.assertEqual(Params().mode, "qmlz")
+        self.assertEqual([s.zone_kind for s in one(SELL_R)], ["QMLZ"])
+        mpl = scan_series("TEST", "M5", with_times(SELL_R), Params(ext=3, atr_len=5, mode="mpl"))   # the MPL is still there if asked for
+        self.assertEqual([s.zone_kind for s in mpl], ["MPL"])
+
+    def test_shoulder_reaching_the_middle_is_valid(self):
+        s = one(SELL_R)[0]                                       # L = 112, shoulder = 120, HH = 126.2: middle = 119.1 <= 120
+        self.assertGreaterEqual(s.shoulder, (s.support + s.head) / 2)
+
+    def test_shoulder_below_the_middle_is_rejected_for_sells_and_buys(self):
+        low_shoulder = build(100, 110, 104, 120, 112, 129, 108, 118.0)      # L = 112, HH ~ 129.3: middle ~ 120.6 > 120
+        self.assertEqual(one(low_shoulder), [])
+        self.assertEqual(one(mirror(low_shoulder)), [])
+        off = scan_series("TEST", "M5", with_times(low_shoulder), Params(ext=3, atr_len=5, sh_ratio=0.0))
+        self.assertEqual(len(off), 1)                            # with the rule switched off it is a setup: the rule alone rejected it
+        off_buy = scan_series("TEST", "M5", with_times(mirror(low_shoulder)), Params(ext=3, atr_len=5, sh_ratio=0.0))
+        self.assertEqual(len(off_buy), 1)
+
+    def test_far_too_high_head_is_rejected(self):
+        self.assertEqual(one(build(100, 110, 104, 120, 112, 134, 108, 118.0)), [])
+
