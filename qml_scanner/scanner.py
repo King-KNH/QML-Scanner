@@ -19,9 +19,9 @@ from .qml_core import Params
 from .report import format_alert, format_pinned
 from .selection import Opportunity, ScoreWeights, cluster, correlation_tags
 
-# Separate Telegram alerts: only "price in the zone" and "back" (price moved away then returned). New / approaching / closed opportunities
-# are no longer notified: they appear in the pinned list, which is still edited at every pass.
-ALERT_KINDS = ("entered", "returned")
+# Separate Telegram alerts: only "price in the zone". New / approaching / back / closed opportunities are no longer notified:
+# they appear in the pinned list, which is still edited at every pass.
+ALERT_KINDS = ("entered",)
 
 
 def _alert_event(e: Event) -> Optional[Event]:
