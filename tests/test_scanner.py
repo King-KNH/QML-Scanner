@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
 
 class TestAlertKinds(unittest.TestCase):
-    """Only "price in the zone" and "back" are announced on Telegram; the rest lives in the pinned list."""
+    """Only "price in the zone" is announced on Telegram; the rest lives in the pinned list."""
 
     @staticmethod
     def ev(kind, status="detected", opp=True):
@@ -148,14 +148,14 @@ class TestAlertKinds(unittest.TestCase):
         from qml_scanner.notify import Event
         return Event(kind, "c", "EURUSD", "sell", opp=SimpleNamespace(primary=SimpleNamespace(status=status)) if opp else None)
 
-    def test_only_in_zone_and_back_are_announced(self):
+    def test_only_in_zone_is_announced(self):
         from qml_scanner.scanner import _alert_event
         self.assertIsNone(_alert_event(self.ev("new", "detected")))
         self.assertIsNone(_alert_event(self.ev("new", "approaching")))
         self.assertIsNone(_alert_event(self.ev("approaching", "approaching")))
         self.assertIsNone(_alert_event(self.ev("closed", opp=False)))
         self.assertEqual(_alert_event(self.ev("entered", "entered")).kind, "entered")
-        self.assertEqual(_alert_event(self.ev("returned", "entered")).kind, "returned")
+        self.assertIsNone(_alert_event(self.ev("returned", "entered")))
 
     def test_new_opportunity_already_in_the_zone_is_announced_as_in_the_zone(self):
         from qml_scanner.scanner import _alert_event

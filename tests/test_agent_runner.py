@@ -150,7 +150,7 @@ class TestRunner(unittest.TestCase):
         texts = list(http.messages.values())
         pinned_ids = store.load_state(root)["tg"]["pinned_ids"]
         alerts = [t for k, t in http.messages.items() if k not in pinned_ids]
-        self.assertTrue(all(t.startswith(("🎯 PRIX DANS LA ZONE", "🔁")) for t in alerts))     # no 🆕 / ⚠️ / ❌ alert any more
+        self.assertTrue(all(t.startswith("🎯 PRIX DANS LA ZONE") for t in alerts))     # no 🆕 / ⚠️ / 🔁 / ❌ alert any more
         self.assertEqual(len(pinned_ids), 1)
         pinned_text = http.messages[pinned_ids[0]]
         self.assertIn("OPPORTUNITÉS QML EN COURS", pinned_text)
